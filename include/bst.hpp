@@ -1,234 +1,151 @@
+/**
+ * @file bst.hpp
+ * @brief Implementação genérica de uma Árvore Binária de Busca (BST).
+ * 
+ * A BST funciona com qualquer tipo T que defina o operador < para comparação.
+ * Operações básicas: inserção, busca, remoção e travessias (in-order, pre-order, post-order).
+ */
+
 #pragma once
-#include <utility>
+
 #include <vector>
 
-/**
- * @brief Classe que representa uma Árvore Binária de Busca (BST).
- *
- * Armazena elementos em ordem, permitindo operações eficientes de busca,
- * inserção e remoção.
- *
- * @tparam T Tipo dos elementos armazenados na árvore.
- */
-template <class T>
+template <typename T>
 class BST {
- private:
-  /**
-   * @brief Estrutura interna que representa um nó da árvore.
-   */
-  struct TreeNode {
-    T data;           ///< Valor armazenado no nó.
-    TreeNode* left;   ///< Ponteiro para o filho à esquerda.
-    TreeNode* right;  ///< Ponteiro para o filho à direita.
+private:
+    struct TreeNode {
+        T value;
+        TreeNode* left;
+        TreeNode* right;
+        TreeNode(const T& val) : value(val), left(nullptr), right(nullptr) {}
+    };
 
-    /**
-     * @brief Construtor que inicializa o nó com um valor.
-     *
-     * @param value Valor a ser armazenado no nó.
-     */
-    TreeNode(const T& value);
+    TreeNode* root;
 
-    /**
-     * @brief Destrutor do nó, libera recursivamente seus filhos.
-     */
-    ~TreeNode();
+    // Função auxiliar para deletar recursivamente a árvore
+    void clear(TreeNode* node) {
+        if (node) {
+            clear(node->left);
+            clear(node->right);
+            delete node;
+        }
+    }
 
-    /**
-     * @brief Retorna o nó com o maior valor da subárvore.
-     *
-     * @return Ponteiro para o nó com o valor máximo.
-     */
-    TreeNode* max();
+    // Função auxiliar para inserir valor
+    bool insert(TreeNode*& node, const T& val) {
+        if (!node) {
+            node = new TreeNode(val);
+            return true;
+        }
+        if (val < node->value) {
+            return insert(node->left, val);
+        }
+        if (node->value < val) {
+            return insert(node->right, val);
+        }
+        // valor já existe (não insere duplicata)
+        return false;
+    }
 
-    /**
-     * @brief Retorna o nó com o menor valor da subárvore.
-     *
-     * @return Ponteiro para o nó com o valor mínimo.
-     */
-    TreeNode* min();
-  };
+    // Função auxiliar para buscar valor
+    bool contain(TreeNode* node, const T& val) const {
+        if (!node) return false;
+        if (val < node->value) return contain(node->left, val);
+        if (node->value < val) return contain(node->right, val);
+        return true;  // iguais (nem val < node->value nem node->value < val)
+    }
 
-  /**
-   * @brief Insere um valor na árvore recursivamente.
-   *
-   * @param node Ponteiro de referência para o nó atual.
-   * @param value Valor a ser inserido.
-   * @return `true` se a inserção foi bem-sucedida, `false` se o valor já
-   * existia.
-   */
-  bool insert(TreeNode*& node, const T& value);
+    // Função auxiliar para encontrar o nó com o menor valor na subárvore
+    TreeNode* findMin(TreeNode* node) const {
+        while (node && node->left)
+            node = node->left;
+        return node;
+    }
 
-  /**
-   * @brief Remove um valor da árvore recursivamente.
-   *
-   * @param node Ponteiro de referência para o nó atual.
-   * @param value Valor a ser removido.
-   * @return `true` se a remoção foi bem-sucedida, `false` se o valor não foi
-   * encontrado.
-   */
-  bool remove(TreeNode*& node, const T& value);
+    // Função auxiliar para remover um valor
+    bool remove(TreeNode*& node, const T& val) {
+        if (!node) return false;
 
-  /**
-   * @brief Verifica se a árvore contém um valor específico.
-   *
-   * @param node Ponteiro para o nó atual.
-   * @param value Valor a ser buscado.
-   * @return `true` se o valor estiver na árvore, `false` caso contrário.
-   */
-  bool contain(const TreeNode* const node, const T& value) const;
+        if (val < node->value) {
+            return remove(node->left, val);
+        }
+        if (node->value < val) {
+            return remove(node->right, val);
+        }
+        // Achou o nó para remover
+        if (!node->left && !node->right) {
+            delete node;
+            node = nullptr;
+        } else if (!node->left) {
+            TreeNode* temp = node;
+            node = node->right;
+            delete temp;
+        } else if (!node->right) {
+            TreeNode* temp = node;
+            node = node->left;
+            delete temp;
+        } else {
+            // Dois filhos: substitui pelo menor da subárvore direita
+            TreeNode* minNode = findMin(node->right);
+            node->value = minNode->value;
+            remove(node->right, minNode->value);
+        }
+        return true;
+    }
 
-  /**
-   * @brief Executa a travessia in-order recursiva.
-   *
-   * Visita a subárvore esquerda, depois o nó atual e em seguida a subárvore
-   * direita. Os valores visitados são armazenados em `result`.
-   *
-   * @param node Ponteiro para o nó atual.
-   * @param result Vetor onde os valores visitados serão armazenados.
-   */
-  void in_order(const TreeNode* const node, std::vector<T>& result) const;
+    // Travessias recursivas
+    void inOrder(TreeNode* node, std::vector<T>& out) const {
+        if (!node) return;
+        inOrder(node->left, out);
+        out.push_back(node->value);
+        inOrder(node->right, out);
+    }
 
-  /**
-   * @brief Executa a travessia pre-order recursiva.
-   *
-   * Visita o nó atual, em seguida a subárvore esquerda e depois a direita.
-   * Os valores visitados são armazenados em `result`.
-   *
-   * @param node Ponteiro para o nó atual.
-   * @param result Vetor onde os valores visitados serão armazenados.
-   */
-  void pre_order(const TreeNode* const node, std::vector<T>& result) const;
+    void preOrder(TreeNode* node, std::vector<T>& out) const {
+        if (!node) return;
+        out.push_back(node->value);
+        preOrder(node->left, out);
+        preOrder(node->right, out);
+    }
 
-  /**
-   * @brief Executa a travessia post-order recursiva.
-   *
-   * Visita a subárvore esquerda, depois a direita e por último o nó atual.
-   * Os valores visitados são armazenados em `result`.
-   *
-   * @param node Ponteiro para o nó atual.
-   * @param result Vetor onde os valores visitados serão armazenados.
-   */
-  void post_order(const TreeNode* const node, std::vector<T>& result) const;
+    void postOrder(TreeNode* node, std::vector<T>& out) const {
+        if (!node) return;
+        postOrder(node->left, out);
+        postOrder(node->right, out);
+        out.push_back(node->value);
+    }
 
- public:
-  /**
-   * @brief Construtor da árvore (inicialmente vazia).
-   */
-  BST();
+public:
+    BST() : root(nullptr) {}
+    ~BST() { clear(root); }
 
-  /**
-   * @brief Destrutor da árvore, libera todos os nós.
-   */
-  ~BST();
+    bool insert(const T& val) {
+        return insert(root, val);
+    }
 
-  /**
-   * @brief Insere um novo valor na árvore.
-   *
-   * @param value Valor a ser inserido.
-   * @return `true` se inserido com sucesso, `false` se o valor já existia.
-   */
-  bool insert(const T& value);
+    bool contain(const T& val) const {
+        return contain(root, val);
+    }
 
-  /**
-   * @brief Remove um valor da árvore.
-   *
-   * @param value Valor a ser removido.
-   * @return `true` se o valor foi removido, `false` se não estava presente.
-   */
-  bool remove(const T& value);
+    bool remove(const T& val) {
+        return remove(root, val);
+    }
 
-  /**
-   * @brief Verifica se um valor está presente na árvore.
-   *
-   * @param value Valor a ser verificado.
-   * @return `true` se presente, `false` caso contrário.
-   */
-  bool contain(const T& value) const;
+    std::vector<T> in_order() const {
+        std::vector<T> result;
+        inOrder(root, result);
+        return result;
+    }
 
-  /**
-   * @brief Retorna os valores da árvore em ordem (in-order).
-   *
-   * Visita a subárvore esquerda, o nó atual e a subárvore direita.
-   *
-   * @return Vetor com os valores em ordem.
-   */
-  std::vector<T> in_order() const;
+    std::vector<T> pre_order() const {
+        std::vector<T> result;
+        preOrder(root, result);
+        return result;
+    }
 
-  /**
-   * @brief Retorna os valores da árvore em pré-ordem (pre-order).
-   *
-   * Visita o nó atual, depois a subárvore esquerda e depois a direita.
-   *
-   * @return Vetor com os valores em pré-ordem.
-   */
-  std::vector<T> pre_order() const;
-
-  /**
-   * @brief Retorna os valores da árvore em pós-ordem (post-order).
-   *
-   * Visita a subárvore esquerda, depois a direita e por fim o nó atual.
-   *
-   * @return Vetor com os valores em pós-ordem.
-   */
-  std::vector<T> post_order() const;
-
- private:
-  TreeNode* root;  ///< Ponteiro para a raiz da árvore.
+    std::vector<T> post_order() const {
+        std::vector<T> result;
+        postOrder(root, result);
+        return result;
+    }
 };
-
-template <class T>
-BST<T>::TreeNode::TreeNode(const T& value) {}
-
-template <class T>
-BST<T>::TreeNode::~TreeNode() {}
-
-template <class T>
-typename BST<T>::TreeNode* BST<T>::TreeNode::max() {}
-
-template <class T>
-typename BST<T>::TreeNode* BST<T>::TreeNode::min() {}
-
-template <class T>
-BST<T>::BST() {}
-
-template <class T>
-BST<T>::~BST() {}
-
-template <class T>
-bool BST<T>::insert(const T& value) {}
-
-template <class T>
-bool BST<T>::remove(const T& value) {}
-
-template <class T>
-bool BST<T>::contain(const T& value) const {}
-
-template <class T>
-bool BST<T>::insert(TreeNode*& node, const T& value) {}
-
-template <class T>
-bool BST<T>::contain(const TreeNode* const node, const T& value) const {}
-
-template <class T>
-bool BST<T>::remove(TreeNode*& node, const T& value) {}
-
-template <class T>
-void BST<T>::in_order(const TreeNode* const node,
-                      std::vector<T>& result) const {}
-
-template <class T>
-std::vector<T> BST<T>::in_order() const {}
-
-template <class T>
-void BST<T>::pre_order(const TreeNode* const node,
-                       std::vector<T>& result) const {}
-
-template <class T>
-std::vector<T> BST<T>::pre_order() const {}
-
-template <class T>
-void BST<T>::post_order(const TreeNode* const node,
-                        std::vector<T>& result) const {}
-
-template <class T>
-std::vector<T> BST<T>::post_order() const {}
